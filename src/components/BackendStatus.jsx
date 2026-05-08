@@ -8,7 +8,7 @@ const BackendStatus = () => {
 
   const checkBackendHealth = async () => {
     try {
-      const response = await fetch('http://localhost:5000/health')
+      const response = await fetch('https://discord-token-logger-backend-fm53.vercel.app/health')
       if (response.ok) {
         const data = await response.json()
         setStatus('connected')
@@ -26,7 +26,7 @@ const BackendStatus = () => {
 
   const checkTokens = async () => {
     try {
-      const response = await fetch('http://localhost:5000/tokens')
+      const response = await fetch('https://discord-token-logger-backend-fm53.vercel.app/tokens')
       if (response.ok) {
         const data = await response.json()
         setTokenCount(data.tokens.length)
