@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API_ORIGIN } from '../api'
 
 const BackendStatus = () => {
   const [status, setStatus] = useState('checking')
@@ -8,7 +9,7 @@ const BackendStatus = () => {
 
   const checkBackendHealth = async () => {
     try {
-      const response = await fetch('https://discord-token-logger-backend-fm53.vercel.app/health')
+      const response = await fetch(`${API_ORIGIN}/api/health`)
       if (response.ok) {
         const data = await response.json()
         setStatus('connected')
@@ -26,7 +27,7 @@ const BackendStatus = () => {
 
   const checkTokens = async () => {
     try {
-      const response = await fetch('https://discord-token-logger-backend-fm53.vercel.app/tokens')
+      const response = await fetch(`${API_ORIGIN}/api/tokens`)
       if (response.ok) {
         const data = await response.json()
         setTokenCount(data.tokens.length)

