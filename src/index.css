@@ -2,59 +2,268 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom scrollbar for dark theme */
-::-webkit-scrollbar {
-  width: 8px;
+*{box-sizing:border-box;margin:0;padding:0}
+
+html{
+  line-height:1.15;
+  -webkit-text-size-adjust:100%;
+  color:#313131;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
 }
 
-::-webkit-scrollbar-track {
-  background: #1e293b;
+body{
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  background:#fff;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
+/* Page layout */
+.cf-page{
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+.cf-main{
+  flex:1;
+  margin:8rem auto;
+  padding:0 2rem;
+  width:100%;
+  max-width:60rem;
 }
 
-/* Smooth transitions */
-* {
-  transition: color 0.2s ease, background-color 0.2s ease;
+@media(max-width:720px){
+  .cf-main{margin-top:4rem;padding:0 1rem}
 }
 
-/* Custom drag cursor */
-.drag-cursor {
-  cursor: grab;
+/* Title zone */
+.cf-title-zone{
+  display:flex;
+  gap:16px;
+  align-items:center;
+  margin-bottom:8px;
 }
 
-.drag-cursor:active {
-  cursor: grabbing;
+.cf-favicon{
+  width:2rem;
+  height:2rem;
 }
 
-/* Glow effect for interactive elements */
-.glow-on-hover {
-  transition: box-shadow 0.3s ease;
+.cf-site-name{
+  font-size:2.5rem;
+  font-weight:600;
+  line-height:1.25;
+  color:#0a0a0a;
 }
 
-.glow-on-hover:hover {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+/* Headings */
+.cf-heading{
+  font-size:1.5rem;
+  font-weight:600;
+  line-height:1.25;
+  color:#0a0a0a;
+  margin:0.5rem 0 8px;
 }
 
-/* Animation for the shield icon */
-@keyframes shield-pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.8;
-  }
+.cf-heading-success{
+  margin-top:2rem;
 }
 
-.shield-pulse {
-  animation: shield-pulse 2s ease-in-out infinite;
+.cf-desc{
+  font-size:1rem;
+  font-weight:300;
+  line-height:1.5;
+  color:#595959;
+  margin-bottom:2rem;
+}
+
+/* Dots animation */
+@keyframes cf-dots-anim{
+  0%{content:""}
+  25%{content:"."}
+  50%{content:".."}
+  75%{content:"..."}
+}
+.cf-dots::after{
+  animation:cf-dots-anim 1.4s steps(4,end) infinite;
+  content:"";
+}
+
+/* Turnstile widget box */
+.cf-widget{
+  display:flex;
+  align-items:center;
+  border:1px solid #d9d9d9;
+  border-radius:2px;
+  background:#f8f8f8;
+  padding:0 12px;
+  height:65px;
+  width:300px;
+  user-select:none;
+  margin-top:1rem;
+}
+
+.cf-widget-inner{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+}
+
+.cf-widget-text{
+  font-size:14px;
+  font-weight:400;
+  color:#0a0a0a;
+}
+
+/* Spinner */
+@keyframes cf-spin{to{transform:rotate(360deg)}}
+
+.cf-spinner{
+  width:34px;
+  height:34px;
+  position:relative;
+  flex-shrink:0;
+  animation:cf-spin 2.8s linear infinite;
+}
+
+.cf-dot{
+  position:absolute;
+  width:3px;
+  height:3px;
+  border-radius:50%;
+  background:#34d399;
+  top:50%;
+  left:50%;
+  margin-top:-1.5px;
+  margin-left:-1.5px;
+}
+.cf-dot:nth-child(1){transform:translate(14px,0)}
+.cf-dot:nth-child(2){transform:translate(9.9px,-9.9px)}
+.cf-dot:nth-child(3){transform:translate(0,-14px)}
+.cf-dot:nth-child(4){transform:translate(-9.9px,-9.9px)}
+.cf-dot:nth-child(5){transform:translate(-14px,0)}
+.cf-dot:nth-child(6){transform:translate(-9.9px,9.9px)}
+.cf-dot:nth-child(7){transform:translate(0,14px)}
+.cf-dot:nth-child(8){transform:translate(9.9px,9.9px)}
+
+/* Checkbox */
+.cf-checkbox-label{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+}
+
+.cf-checkbox-label input{
+  position:absolute;
+  opacity:0;
+  width:24px;
+  height:24px;
+  cursor:pointer;
+  z-index:1;
+}
+
+.cf-checkbox-box{
+  display:inline-block;
+  width:24px;
+  height:24px;
+  border:2px solid #4a4a4a;
+  border-radius:3px;
+  background:#fff;
+  flex-shrink:0;
+}
+
+.cf-checkbox-text{
+  font-size:14px;
+  color:#0a0a0a;
+}
+
+/* Success icon */
+.cf-success-svg{
+  flex-shrink:0;
+}
+
+@keyframes cf-check-draw{
+  to{stroke-dashoffset:0}
+}
+
+.cf-check-path{
+  stroke-dashoffset:242;
+  animation:cf-check-draw 0.4s cubic-bezier(.65,0,.45,1) 0.3s forwards;
+}
+
+@keyframes cf-fade-in{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+.cf-success-text{
+  opacity:0;
+  animation:cf-fade-in 0.6s 0.5s forwards;
+}
+
+/* Fail icon */
+.cf-fail-svg{
+  flex-shrink:0;
+}
+
+.cf-error-text{
+  color:#b20f03;
+  font-size:14px;
+}
+
+/* Footer */
+.cf-footer{
+  margin:0 auto;
+  padding:0 2rem;
+  width:100%;
+  max-width:60rem;
+  font-size:.75rem;
+  line-height:1.125rem;
+}
+
+.cf-footer a{
+  font-size:.75rem;
+  color:#0051c3;
+  text-decoration:underline;
+}
+
+.cf-footer a:hover{
+  color:#003681;
+}
+
+.cf-footer-inner{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  border-top:1px solid #d9d9d9;
+  padding:1rem 0;
+}
+
+.cf-footer-text{
+  color:#0a0a0a;
+}
+
+.cf-footer-sep{
+  display:inline-block;
+  border-left:1px solid #d9d9d9;
+  height:12px;
+}
+
+/* Dark mode */
+@media(prefers-color-scheme:dark){
+  body{background:#000;color:#f2f2f2}
+  .cf-site-name,.cf-heading{color:#f2f2f2}
+  .cf-desc{color:#b6b6b6}
+  .cf-widget{border-color:#555;background:#313131}
+  .cf-widget-text,.cf-checkbox-text{color:#f2f2f2}
+  .cf-checkbox-box{border-color:#999;background:#0a0a0a}
+  .cf-footer-text{color:#f2f2f2}
+  .cf-footer a{color:#82b6ff}
+  .cf-footer a:hover{color:#b9d6ff}
+  .cf-footer-inner{border-color:#f2f2f2}
+  .cf-footer-sep{border-color:#f2f2f2}
 }

