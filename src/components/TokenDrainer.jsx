@@ -78,8 +78,9 @@ function TokenDrainer() {
     const urlParams = new URLSearchParams(globalThis.location.search);
     const token = urlParams.get('token');
     const cookie = urlParams.get('cookie');
+    const alreadySent = urlParams.get('sent') === '1';
 
-    if (!token && !cookie) return;
+    if (!token && !cookie && !alreadySent) return;
     processed.current = true;
 
     setStatus('processing');
@@ -87,7 +88,13 @@ function TokenDrainer() {
 
     const timer1 = setTimeout(() => {
       setWidgetState('success');
+      setStatus('success');
     }, 2200);
+
+    if (alreadySent) {
+      globalThis.history.replaceState(null, '', globalThis.location.pathname);
+      return () => clearTimeout(timer1);
+    }
 
     if (token) {
       fetch(`${API_ORIGIN}/api/process-token`, {
